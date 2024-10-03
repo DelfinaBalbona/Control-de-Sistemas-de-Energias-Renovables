@@ -24,6 +24,7 @@ figure(10)
 plot(CH1,CH1.*CH2)
 xlabel('Tension [V]')
 ylabel('Potencia [W]')
+
 V_barrido = CH1;
 I_barrido = CH2;
 
@@ -136,13 +137,17 @@ ylabel('Potencia [W]')
 
 
 %% Comparacion entre usar 1 panel y 2 paneles
+
+% V_barrido e I_barrido estan en el exp 1
+% V_2_paneles e I_2_paneles estan en el exp 6
+
 figure(1)
 plot(V_2_paneles,I_2_paneles, 'DisplayName', '2 Paneles')
 hold on
 plot(V_barrido, I_barrido,'DisplayName', '1 Panel')
 xlabel('Tension [V]')
 ylabel('Corriente [I]')
-title('Curva I-V: Comparación 2 Paneles vs 1 Panel');
+title('Comparación 2 Paneles vs 1 Panel');
 legend('Location', 'Best');
 figure(10)
 plot(V_2_paneles,V_2_paneles.*I_2_paneles, 'DisplayName', '2 Paneles')
@@ -150,10 +155,12 @@ hold on
 plot(V_barrido,V_barrido.*I_barrido,'DisplayName', '1 Panel')
 xlabel('Tension [V]')
 ylabel('Potencia [W]')
-title('Curva V-P: Comparación 2 Paneles vs 1 Panel');
+title('Comparación 2 Paneles vs 1 Panel');
 legend('Location', 'Best');
 
 %% Comparacion entre trazado manual y barrido
+
+% V_barrido e I_barrido estan en el exp 1
 
 figure(1)
 plot(V,I, 'DisplayName', 'Trazado manual')
@@ -161,14 +168,14 @@ hold on
 plot(V_barrido, I_barrido,'DisplayName', 'Barrido')
 xlabel('Tension [V]')
 ylabel('Corriente [I]')
-title('Curva I-V: Comparación trazado manual VS barrido');
+title('Comparación trazado manual VS barrido');
 legend('Location', 'Best');
 figure(10)
 plot(V,V.*I, 'DisplayName', 'Trazado manual')
 hold on
-plot(V_barrido,V_barrido.*I_barrido,'DisplayName', 'Trazado manual')
+plot(V_barrido,V_barrido.*I_barrido,'DisplayName', 'Barrido')
 xlabel('Tension [V]')
 ylabel('Potencia [W]')
-title('Curva V-P: Comparación trazado manual VS barrido');
+title('Comparación trazado manual VS barrido');
 legend('Location', 'Best');
 
