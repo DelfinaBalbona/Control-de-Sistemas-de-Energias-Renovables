@@ -1,3 +1,26 @@
+Lf = 5e-3;
+Rf = 0.1;
+Cf = 540e-6;
+Cm = 1000e-6;
+Vbat = 12;
+Rbat = 0.01;
+F = 20e3;
+
+load('simulacion_1.mat')
+
+[Pmax,idx_v] = max(out.v.*out.i);
+
+%idx_v = 450;
+Vmax = out.v(idx_v)
+Imax = out.i(idx_v)
+
+polinomio = [-Vmax/(Rbat + Rf) Vbat/(Rbat + Rf) Imax];
+u = roots(polinomio);
+x0.u = u(1);
+x0.vm = Vmax;
+x0.i_f = (-Vbat+x0.vm*x0.u)/(Rbat+Rf);
+x0.vf = Rbat*x0.i_f+Vbat;
+Imp = Imax;
 %% PARTE A un panel
 
 load('experimento_1.mat')
@@ -41,24 +64,6 @@ xlabel('Tension [V]','Interpreter', 'latex')
 ylabel('Potencia [W]','Interpreter', 'latex')
 
 
-%% PARTE A 2
-
-load('experimento_1.mat')
-
-v = sgolayfilt(CH1,1,7);
-i = sgolayfilt(CH2,1,7);
-
-[Pmax,idx_v] = max(v.*i);
-Vmax = v(idx_v)
-Imax = i(idx_v)
-
-Rbat = 0.1;
-Rf = 0.1;
-Vbat = 12;
-
-polinomio = [-Vmax/(Rbat + Rf) Vbat/(Rbat + Rf) Imax];
-u = roots(polinomio)
-
 %%
 
 load('simulacion_3.mat')
@@ -91,11 +96,6 @@ xlim([0 0.7])
 %% PARTE B 1
 
 di = diff(out.i);
-cm = 100e-6;
-lf = 10e-3;
-cf = 100e-6;
-f = 20000;
-i_f = (-Vbat+Vmax*u(1))/(Rbat+Rf);
 
 A = [di(idx_v) -u(1)/cm 0; u(1)/lf -Rf/lf -1/lf; 0 1/cf -1/(Rbat*cf)];
 B = [i_f  Vmax/lf 0]';
@@ -106,12 +106,9 @@ sys = ss(A,B,C,D)
 
 %% PARTE B 2
 
-Lf = 5e-3;
-Rf = 0.01;
-Cf = 540e-6;
-Cm = 1000e-6;
-Vbat = 12;
-Rbat = 0.01;
-F = 20e3;
-Imp = 1.67;
+
+
+
+
+
 
