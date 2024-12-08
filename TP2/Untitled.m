@@ -1,114 +1,244 @@
-Lf = 5e-3;
-Rf = 0.1;
-Cf = 540e-6;
-Cm = 1000e-6;
+% Parámetros: 
+Lf = 1e-3;
+Rf = 0.15;
+Cf = 100e-6;
+Cm = 100e-6;
 Vbat = 12;
 Rbat = 0.01;
 F = 20e3;
 
-load('simulacion_1.mat')
+% Cálculo de puntos de equilibrio para Max potencia:
+% Punto de Max. Pot.:
+load('sim1150.mat')
+[Pmax,idx_v] = max(sim1150.v .* sim1150.i);                 %idx_v = 16338;
 
-[Pmax,idx_v] = max(out.v.*out.i);
+x0.vm = sim1150.v(idx_v);                                   % vm = 17.2483 V
+x0.im = sim1150.i(idx_v);                                   % im = 1.9122 A
 
-%idx_v = 450;
-Vmax = out.v(idx_v)
-Imax = out.i(idx_v)
-
-polinomio = [-Vmax/(Rbat + Rf) Vbat/(Rbat + Rf) Imax];
+% Calculo de ptos. de eq.:
+polinomio = [-x0.vm/(Rbat + Rf) Vbat/(Rbat + Rf) x0.im];
 u = roots(polinomio);
-x0.u = u(1);
-x0.vm = Vmax;
-x0.i_f = (-Vbat+x0.vm*x0.u)/(Rbat+Rf);
-x0.vf = Rbat*x0.i_f+Vbat;
-Imp = Imax;
-%% PARTE A un panel
+x0.u = u(1);                                                % u = 0.7203
+x0.if = (-Vbat+x0.vm*x0.u)/(Rbat+Rf);                       % if = 2.6545 A
+x0.vf = Rbat*x0.if+Vbat;                                    % vf = 12.0265 V
 
-load('experimento_1.mat')
-load('simulacion_1.mat')
+%% PARTE A1: 1 panel
+
+load('experimento_1Panel.mat')
+load('sim1150.mat')
+
+figure(1)
+plot(sim1150.v, sim1150.i);
+hold on 
+grid on
+plot(CH1,CH2)
+xlabel('Tension [V]','Interpreter', 'latex')
+ylabel('Corriente [I]','Interpreter', 'latex')
+
+figure(2)
+plot(sim1150.v,sim1150.v.*sim1150.i)
+hold on 
+grid on
+plot(CH1,CH1.*CH2)
+xlabel('Tension [V]','Interpreter', 'latex')
+ylabel('Potencia [W]','Interpreter', 'latex')
+
+%% PARTE A1: 2 paneles
+
+load('experimento_2Paneles.mat')
+load('sim1150_2P.mat')
 
 figure(1)
 plot(out.v, out.i);
-hold on 
-grid on
-plot(CH1,CH2)
-xlabel('Tension [V]','Interpreter', 'latex')
-ylabel('Corriente [I]','Interpreter', 'latex')
+hold on;
+grid on;
+plot(CH1,CH2);
+xlabel('Tension [V]','Interpreter', 'latex');
+ylabel('Corriente [I]','Interpreter', 'latex');
 
 figure(2)
-plot(out.v,out.p)
-hold on 
-grid on
-plot(CH1,CH1.*CH2)
-xlabel('Tension [V]','Interpreter', 'latex')
-ylabel('Potencia [W]','Interpreter', 'latex')
+plot(out.v, out.i .* out.v);
+hold on;
+grid on;
+plot(CH1 , CH1.*CH2)
+xlabel('Tension [V]','Interpreter', 'latex');
+ylabel('Potencia [W]','Interpreter', 'latex');
 
-%% PARTE A dos paneles
+%% Parte A 2
 
-load('experimento_6_(2 paneles).mat')
-load('simulacion_2.mat')
+%load('simulacion_3.mat') % simulación con panel. (da mal)   out.v2, out.i2, out.p2
 
-figure(1)
-plot(out.v1, out.i1);
-hold on 
-grid on
-plot(CH1,CH2)
-xlabel('Tension [V]','Interpreter', 'latex')
-ylabel('Corriente [I]','Interpreter', 'latex')
-
-figure(2)
-plot(out.v1,out.p1)
-hold on 
-grid on
-plot(CH1,CH1.*CH2)
-xlabel('Tension [V]','Interpreter', 'latex')
-ylabel('Potencia [W]','Interpreter', 'latex')
-
-
-%%
-
-load('simulacion_3.mat')
+load("sim_modelo_matematico_u_const.mat")
 
 figure(1)
-plot(out.tout,out.v2);
+plot(out.tout,out.v_m);
 grid on
+xlabel('Tiempo [s]','Interpreter', 'latex')
 ylabel('Tension [V]','Interpreter', 'latex')
-xlabel('Tiempo [s]','Interpreter', 'latex')
-ylim([14 21])
-xlim([0 0.7])
 
 figure(2)
-plot(out.tout,out.i2);
+plot(out.tout,out.i_f);
 grid on
 xlabel('Tiempo [s]','Interpreter', 'latex')
 ylabel('Corriente [I]','Interpreter', 'latex')
-ylim([1.8 2.2])
-xlim([0 0.7])
 
 figure(3)
-plot(out.tout, out.p2);
+plot(out.tout, out.v_f);
 grid on
 xlabel('Tiempo [s]','Interpreter', 'latex')
-ylabel('Potencia [W]','Interpreter', 'latex')
-ylim([29 35])
-xlim([0 0.7])
+ylabel('Tension [V]','Interpreter', 'latex')
 
 
 %% PARTE B 1
 
-di = diff(out.i);
+load('sim1150.mat');
+di = diff(sim1150.i);
 
-A = [di(idx_v) -u(1)/cm 0; u(1)/lf -Rf/lf -1/lf; 0 1/cf -1/(Rbat*cf)];
-B = [i_f  Vmax/lf 0]';
-C = [0 1 0];
+% x = [vm if vf]'
+
+A = [di(idx_v)/Cm, -x0.u/Cm, 0; x0.u/Lf, -Rf/Lf, -1/Lf; 0, 1/Cf, -1/(Rbat*Cf)];
+B = [-x0.if/Cm,  x0.vm/Lf, 0]';
+C_if = [0 1 0];
+C_vm = [1 0 0];
 D = 0;
 
-sys = ss(A,B,C,D)
-
-%% PARTE B 2
-
+sys_if = ss(A,B,C_if,D);
+sys_vm = ss(A,B,C_vm,D);
 
 
+% PI Tuning:
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Control if:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Diseño PI:
+kp_if = -0.0055;
+ki_if = -1500*0.0055;
+
+% Planta modelo:
+G_if = tf(sys_if);
+% PI:
+PI_if = pid(kp_if,ki_if,0);
+
+% Verificar la respuesta del sistema en lazo cerrado
+T_if = feedback(PI_if*G_if, 1);
+figure;
+step(T_if);
+
+% Para el diseño del PI:
+%controlSystemDesigner(sys_if,PI_if)
+
+% Obtener los polos y ceros de la planta
+figure;
+pzmap(G_if);
+xlim([-1000 2000]);
+xlabel('Parte Real');
+ylabel('Parte Imaginaria');
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Control Vm:
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Diseño PI:
+
+kp_vm = -0.64601;
+ki_vm = -214.5*0.64601;         % 138.5691
+
+% Planta modelo:
+G_vm = tf(sys_vm);
+% PI:
+PI_vm = pid(kp_vm,ki_vm,0);
+
+% Verificar la respuesta del sistema en lazo cerrado
+T_vm = feedback(PI_vm*G_vm, 1);
+figure;
+step(T_vm);
+
+% Para el diseño del PI:
+%controlSystemDesigner(sys_vm,PI_vm)
+
+% Obtener los polos y ceros de la planta
+figure;
+pzmap(G_vm);
+xlim([-5000 1000]);
+xlabel('Parte Real');
+ylabel('Parte Imaginaria');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%% Parte C:
+
+load("sim600.mat");
+load("sim800.mat");
+load("sim1000.mat");
+load("sim1150.mat");
+load("sim1400.mat");
+
+% saco los max para cada irradiancia:
+vm_max = zeros(5,1);
+im_max = zeros(5,1);
+
+[Pmax, idx_v] = max(sim600.v.*sim600.i);
+vm_max(1) = sim600.v(idx_v);
+im_max(1) = sim600.i(idx_v);
+[Pmax, idx_v] = max(sim800.v.*sim800.i);
+vm_max(2) = sim800.v(idx_v);
+im_max(2) = sim800.i(idx_v);
+[Pmax, idx_v] = max(sim1000.v.*sim1000.i);
+vm_max(3) = sim1000.v(idx_v);
+im_max(3) = sim1000.i(idx_v);
+[Pmax, idx_v] = max(sim1150.v.*sim1150.i);
+vm_max(4) = sim1150.v(idx_v);
+im_max(4) = sim1150.i(idx_v);
+[Pmax, idx_v] = max(sim1400.v.*sim1400.i);
+vm_max(5) = sim1400.v(idx_v);
+im_max(5) = sim1400.i(idx_v);
+
+% plot en v-I
+figure;
+plot(sim600.v,sim600.i); hold on;
+plot(sim800.v,sim800.i);
+plot(sim1000.v,sim1000.i);
+plot(sim1150.v,sim1150.i);
+plot(sim1400.v,sim1400.i);
+
+plot(vm_max,im_max, 'o');
+
+
+Vr=fit(im_max,vm_max,'poly1');      % Vr(x) = Vr.p1*x + Vr.p2 
+
+Imf = 0.5:0.01:3;
+plot(Vr(Imf'),Imf);
+
+% plot en v-P
+figure;
+plot(sim600.v,sim600.v.*sim600.i); hold on;
+plot(sim800.v,sim800.v.*sim800.i);
+plot(sim1000.v,sim1000.v.*sim1000.i);
+plot(sim1150.v,sim1150.v.*sim1150.i);
+plot(sim1400.v,sim1400.v.*sim1400.i);
+
+
+plot(Vr(Imf),Vr(Imf).*Imf')     % Recta que pasa por los max de pot.
+
+plot(vm_max,im_max.*vm_max, 'o');
 
 
 
 
+%%
+
+figure 
+plot(out.tout, out.v_m);
+figure 
+plot(out.tout, out.i_m);
+figure
+plot(out.tout, out.v_f);
+figure
+plot(out.tout, out.i_f);
+
+
+plot(out.v, out.i);
+plot(out.v, out.i .* out.v);
+
+sim1150.v = out.v;
+sim1150.i = out.i;
