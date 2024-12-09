@@ -8,6 +8,9 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#define FUENTE_TENSION 1
+
+
 // Definimos los pines analógicos
 #define PIN_A0 0 // A0 en el puerto analógico
 #define PIN_A1 1 // A1 en el puerto analógico
@@ -17,6 +20,19 @@
 // Definimos el pin de salida PWM
 #define PWM_PIN 3 // D3
 
+#define F 20000.0
+
+// PI tension:
+#define KP_V -0.64601
+#define KI_V -138.5691
+
+// PI corriente:
+#define KP_I 1.0
+#define KI_I 1000.0
+
+// MD:
+#define ANCHO 0.001
+
 // Variables de control
 float Vm = 0.0;
 float Im = 0.0;
@@ -24,10 +40,6 @@ float Vf = 0.0;
 float If = 0.0;
 int flag = 0;
 
-
-float Kp = -5.0;
-float Ki = -2.5;
-float h = 0.01;
 // Inicializamos el timer para la interrupción
 void setupTimer() {
 	// Configuramos el Timer/Counter 1
@@ -59,6 +71,13 @@ void setup() {
 	sei();
 }
 
+uint16_t lecturaADC(uint16_t pin){
+	ADMUX = (ADMUX & 0xF0) | (pin & 0x0F); // Seleccionamos A0
+	ADCSRA |= (1 << ADSC); // Iniciamos la conversión
+	while (ADCSRA & (1 << ADSC)); // Esperamos a que la conversión termine
+	return ADC; // Obtenemos el valor leído
+}
+
 // Función de interrupción del Timer 1
 ISR(TIMER1_COMPA_vect) {
 	// Leemos los valores de los pines analógicos directamente
@@ -67,18 +86,24 @@ ISR(TIMER1_COMPA_vect) {
 	ADCSRA |= (1 << ADSC); // Iniciamos la conversión
 	while (ADCSRA & (1 << ADSC)); // Esperamos a que la conversión termine
 	Im = ADC * 5 / 255; // Obtenemos el valor leído
+	
+	Im = lecturaADC(PIN_A0)* 5 / 255; // Obtenemos el valor leído
 
 	// Leemos A1
 	ADMUX = (ADMUX & 0xF0) | (PIN_A1 & 0x0F); // Seleccionamos A1
 	ADCSRA |= (1 << ADSC); // Iniciamos la conversión
 	while (ADCSRA & (1 << ADSC)); // Esperamos a que la conversión termine
 	Vf = ADC; // Obtenemos el valor leído
+	
+	Vf = lecturaADC(PIN_A1);
 
 	// Leemos A3
 	ADMUX = (ADMUX & 0xF0) | (PIN_A3 & 0x0F); // Seleccionamos A3
 	ADCSRA |= (1 << ADSC); // Iniciamos la conversión
 	while (ADCSRA & (1 << ADSC)); // Esperamos a que la conversión termine
 	uint16_t valorA3 = ADC; // Obtenemos el valor leído
+	
+	valorA3 = lecturaADC(PIN_A3);
 
 	// Leemos A4
 	ADMUX = (ADMUX & 0xF0) | (PIN_A4 & 0x0F); // Seleccionamos A4
@@ -86,8 +111,70 @@ ISR(TIMER1_COMPA_vect) {
 	while (ADCSRA & (1 << ADSC)); // Esperamos a que la conversión termine
 	uint16_t valorA4 = ADC; // Obtenemos el valor leído
 	
+	valorA4 = lecturaADC(PIN_A4);
+	
 	flag = 1;
 
+}
+
+uint16_t MPPT_PO(uint16_t Vm, uint16_t Im){
+	static float	Vold = 17, Pold = 17*1.5;
+}
+
+uint16_t md_v(uint16_t Vref, uint16_t Vm){	
+	float error = Vref - Vm;
+	
+	if(error > ANCHO)
+		return 0;
+	else
+		return 1;
+}
+
+uint16_t pi_i(uint16_t Iref, uint16_t Im){
+	float error, P, I, D_cycle;
+	static float I_ant;
+	
+	error = Iref - Im;
+	
+	P = KP_I*error;
+	I = 1/F*KI_I*error + I_ant;
+	
+	D_cycle = P + I;
+	I_ant = I;
+	
+	if (D_cycle > 1){
+		D_cycle = 1;
+	}
+	if (D_cycle < 0){
+		D_cycle = 0;
+	}
+	
+	return D_cycle;
+}
+
+uint16_t pi_v(uint16_t Vref, uint16_t Vm){
+	float error, P, I, D_cycle;
+	static float I_ant;
+	
+	error = Vref - Vm;
+	
+	P = KP_V*error;
+	I = 1/F*KI_V*error + I_ant;
+	
+	D_cycle = P + I;
+	I_ant = I;
+	
+	#if FUENTE_TENSION
+	
+	if (D_cycle > 1){
+		D_cycle = 1;
+	}
+	if (D_cycle < 0){
+		D_cycle = 0;
+	}
+	#endif
+	
+	return D_cycle;
 }
 
 // Bucle principal
@@ -104,8 +191,8 @@ int main(void) {
 		if (flag == 1){
 			error = Vref - Vm;
 			
-			P = Kp *(error);
-			I_S = h*Ki*(error) + I;
+			P = KP_V *(error);
+			I_S = 1/F*KI_V*(error) + I;
 			
 			pid = P + I;
 			

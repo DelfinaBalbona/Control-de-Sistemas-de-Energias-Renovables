@@ -16,9 +16,9 @@ x0.vm = sim1150.v(idx_v);                                   % vm = 17.2483 V
 x0.im = sim1150.i(idx_v);                                   % im = 1.9122 A
 
 % Si se quiere un punto que no sea el de max pot:
-% P = Pmax*0.9;
+% P = Pmax*0.2;
 % idx_v = find(sim1150.i.*sim1150.v>=P,1,'first');       % inestable para control de corriente (sliding)
-% idx_v = find(sim1150.i.*sim1150.v>=P,1,'last');        % estable
+% % idx_v = find(sim1150.i.*sim1150.v>=P,1,'last');        % estable
 % x0.vm = sim1150.v(idx_v);
 % x0.im = sim1150.i(idx_v);
 
