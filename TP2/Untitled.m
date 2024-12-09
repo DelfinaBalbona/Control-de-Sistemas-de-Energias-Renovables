@@ -15,12 +15,42 @@ load('sim1150.mat')
 x0.vm = sim1150.v(idx_v);                                   % vm = 17.2483 V
 x0.im = sim1150.i(idx_v);                                   % im = 1.9122 A
 
+% Si se quiere un punto que no sea el de max pot:
+% P = Pmax*0.9;
+% idx_v = find(sim1150.i.*sim1150.v>=P,1,'first');       % inestable para control de corriente (sliding)
+% idx_v = find(sim1150.i.*sim1150.v>=P,1,'last');        % estable
+% x0.vm = sim1150.v(idx_v);
+% x0.im = sim1150.i(idx_v);
+
 % Calculo de ptos. de eq.:
 polinomio = [-x0.vm/(Rbat + Rf) Vbat/(Rbat + Rf) x0.im];
 u = roots(polinomio);
 x0.u = u(1);                                                % u = 0.7203
 x0.if = (-Vbat+x0.vm*x0.u)/(Rbat+Rf);                       % if = 2.6545 A
 x0.vf = Rbat*x0.if+Vbat;                                    % vf = 12.0265 V
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Control:
+di = diff(sim1150.i);
+
+% x = [vm if vf]'
+
+A = [di(idx_v)/Cm, -x0.u/Cm, 0; x0.u/Lf, -Rf/Lf, -1/Lf; 0, 1/Cf, -1/(Rbat*Cf)];
+B = [-x0.if/Cm,  x0.vm/Lf, 0]';
+C_if = [0 1 0];
+C_vm = [1 0 0];
+D = 0;
+
+sys_if = ss(A,B,C_if,D);
+sys_vm = ss(A,B,C_vm,D);
+
+% Diseños PIs:
+kp_if = -0.0055;
+ki_if = -1500*0.0055;
+
+kp_vm = -0.64601;
+ki_vm = -214.5*0.64601;         % 138.5691
+
 
 %% PARTE A1: 1 panel
 
@@ -46,7 +76,7 @@ ylabel('Potencia [W]','Interpreter', 'latex')
 %% PARTE A1: 2 paneles
 
 load('experimento_2Paneles.mat')
-load('sim1150_2P.mat')
+load('sim1250_2P.mat')
 
 figure(1)
 plot(out.v, out.i);
@@ -222,9 +252,26 @@ plot(Vr(Imf),Vr(Imf).*Imf')     % Recta que pasa por los max de pot.
 
 plot(vm_max,im_max.*vm_max, 'o');
 
+%% Parte C: Rendimientos
+P_teorica = [23.9806    23.9806 30.06   30.06   27.9088 27.9088 30.06   30.06   34.549  34.549];
+t_teorica = [0          0.3     0.3     0.35    0.35    0.45    0.45    0.5     0.5     1];
+P = out.v_m .* out.i_m;
+
+figure
+plot(out.tout,P);
+hold on;
+plot(t_teorica,P_teorica);
 
 
+Energia = trapz(P,out.tout);
+Energia_teorica = trapz(P_teorica,t_teorica);
 
+Rendimiento = Energia_teorica/Energia
+
+% R_const = 0.9985
+% R_recta = 1.0022
+% R_PO = 0.9932
+% R_IC = 0.9921
 %%
 
 figure 
