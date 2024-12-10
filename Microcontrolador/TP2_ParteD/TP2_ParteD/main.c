@@ -10,16 +10,6 @@
 
 #define FUENTE_TENSION 1
 
-
-// Definimos los pines analógicos
-#define PIN_A0 0 // A0 en el puerto analógico
-#define PIN_A1 1 // A1 en el puerto analógico
-#define PIN_A3 3 // A3 en el puerto analógico
-#define PIN_A4 4 // A4 en el puerto analógico
-
-// Definimos el pin de salida PWM
-#define PWM_PIN 3 // D3
-
 #define F 20000.0
 
 // PI tension:
@@ -32,6 +22,15 @@
 
 // MD:
 #define ANCHO 0.001
+
+// Definimos los pines analógicos
+#define PIN_A0 0 // A0 en el puerto analógico
+#define PIN_A1 1 // A1 en el puerto analógico
+#define PIN_A3 3 // A3 en el puerto analógico
+#define PIN_A4 4 // A4 en el puerto analógico
+
+// Definimos el pin de salida PWM
+#define PWM_PIN 3 // D3
 
 // Variables de control
 float Vm = 0.0;
@@ -117,65 +116,83 @@ ISR(TIMER1_COMPA_vect) {
 
 }
 
-uint16_t MPPT_PO(uint16_t Vm, uint16_t Im){
-	static float	Vold = 17, Pold = 17*1.5;
-}
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
 
-uint16_t md_v(uint16_t Vref, uint16_t Vm){	
-	float error = Vref - Vm;
+uint16_t md_v(uint16_t Vref, uint16_t Vmed){	
+	float error = Vref - Vmed;
 	
 	if(error > ANCHO)
-		return 0;
-	else
 		return 1;
+	else
+		return 0;
 }
 
-uint16_t pi_i(uint16_t Iref, uint16_t Im){
-	float error, P, I, D_cycle;
-	static float I_ant;
+uint16_t pi_i(uint16_t Iref, uint16_t Imed){
+	float error, P, I, salida;
+	static float I_ant = 0;
 	
-	error = Iref - Im;
+	error = Iref - Imed;
 	
 	P = KP_I*error;
 	I = 1/F*KI_I*error + I_ant;
 	
-	D_cycle = P + I;
-	I_ant = I;
-	
-	if (D_cycle > 1){
-		D_cycle = 1;
-	}
-	if (D_cycle < 0){
-		D_cycle = 0;
-	}
-	
-	return D_cycle;
-}
-
-uint16_t pi_v(uint16_t Vref, uint16_t Vm){
-	float error, P, I, D_cycle;
-	static float I_ant;
-	
-	error = Vref - Vm;
-	
-	P = KP_V*error;
-	I = 1/F*KI_V*error + I_ant;
-	
-	D_cycle = P + I;
+	salida = P + I;
 	I_ant = I;
 	
 	#if FUENTE_TENSION
 	
-	if (D_cycle > 1){
-		D_cycle = 1;
+	if (salida > 1){
+		salida = 1;
 	}
-	if (D_cycle < 0){
-		D_cycle = 0;
+	if (salida < 0){
+		salida = 0;
 	}
 	#endif
 	
-	return D_cycle;
+	return salida;
 }
+
+uint16_t pi_v(uint16_t Vref, uint16_t Vmed){
+	float error, P, I, salida;
+	static float I_ant = 0;
+	
+	error = Vref - Vmed;
+	
+	P = KP_V*error;
+	I = 1/F*KI_V*error + I_ant;
+	
+	salida = P + I;
+	I_ant = I;
+	
+	#if FUENTE_TENSION
+	
+	if (salida > 1){
+		salida = 1;
+	}
+	if (salida < 0){
+		salida = 0;
+	}
+	#endif
+	
+	return salida;
+}
+
+uint16_t Control_tensión_salida(uint16_t Vref, uint16_t Vmed, uint16_t Imed){
+	uint16_t Dcycle;
+	
+	Iref = pi_v(Vref, Vmed);
+	Dcycle = pi_i(Iref, Imed);
+	
+	return Dcycle;
+}
+
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+///////////////////////////////////////////////////
+
+
 
 // Bucle principal
 int main(void) {
