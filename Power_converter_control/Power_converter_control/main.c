@@ -8,12 +8,14 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#define ARDUINO_IDE 0
 
 #define CONTROLADOR 4			// 1: Corriente a la salida
 								// 2: Control de tension a la salida con control de corriente anidado.
 								// 3: Sliding de corriente a la salida
 								// 4: MPPT P&O (Control de tensión a la entrada)
 								// 5: MPPT IC (Control de tensión a la entrada)
+								// 6: MPPT recta (Control de tensión a la entrada)		1 PANEL.
 
 #if CONTROLADOR == 1 || CONTROLADOR == 2 || CONTROLADOR == 3
 	// PI tension:
@@ -29,31 +31,41 @@
 	#define KP_V -0.64601
 	#define KI_V -138.5691
 	// PI corriente:
-	#define KP_I -0.0055
-	#define KI_I -8.25
+	#define KP_I 0.0
+	#define KI_I 0.0
 	// MD:
-	#define ANCHO 0.001
+	#define ANCHO 0.01
+#endif
 
-
-// Controladores MPPT:
-#define V_VAR 0.05		// Variaciones en la tensión
-#define V_INIT_REF 17.25    // Tensión de inicio MPPT
-
+// Parametros controladores PI:
 #define T_V 0.0002 //5KHz
 #define T_I 0.0002 //5KHz
+#define I_MAX 2 // Corriente max para lazo de tension
+
+// Controladores MPPT:
+#define V_VAR 0.02		// Variaciones en la tensión
+#define V_INIT_REF 17.25    // Tensión de inicio MPPT
+
+// MPPT recta V-I:		Vref = V_0 + ALPHA * I
+#define ALPHA 0.127760300033380
+#define  V_0 16.987504787624442
 
 // Variables de referencia Iniciales
 volatile float Iref = 0.4;
 volatile float Vref = 6.0;
 volatile float Dcycle = 0.5;
 
-
-// Parámetros del controlador PI
-uint16_t data = 0;
-
 // Parámetros del sistema antiwindup
 unsigned int dutyMax = 1500;   // Valor máximo para el duty cycle
 unsigned int dutyMin = 100;   // Valor mínimo para el duty cycle
+
+
+/****************************************************************************************************************************
+														
+*****************************************************************************************************************************/
+
+// Parámetros del controlador PI
+uint16_t data = 0;
 
 // Definición de pines y variables globales
 #define inputVoltageChannel  1
@@ -99,6 +111,8 @@ void configurar_PWM(void);
 void configurar_ADC(void);
 
 float MPPT_PO(float, float);
+float MPPT_IC(float, float);
+float MPPT_recta(float, float);
 float pi_v(float, float);
 float pi_i(float, float);
 uint16_t md_i(float, float);
@@ -118,20 +132,24 @@ int main(void)
 	configurar_PWM();
 	 DDRB |= (1<<DDB3);
 	configurar_ADC();
-  
-	//Serial.begin(9600);
- 
+	
+	#if ARDUINO_IDE == 1
+	Serial.begin(9600);
+	#endif
+	
     while (1) 
     {
+		#if ARDUINO_IDE == 1
 		/* Código ejecutable cada 1s = 1000 ms */
-		if (ms - lastMeasurementTime >= 1000)
+		if (ms - lastMeasurementTime >= 10000)
 		{
 			lastMeasurementTime = ms;  // Actualizar el tiempo de la última muestra
-			//medicion_variables();
-			//Serial.print(outputVoltage);
-			//Serial.print("\n");
+			medicion_variables();
+			Serial.print(outputVoltage);
+			Serial.print("\n");
 		}
-		
+		ms++;
+		#endif
     }
 }
 
@@ -159,12 +177,13 @@ ISR(TIMER1_OVF_vect){//TIMER1_COMPA_vect) {
 		DUTY = md_i(Iref, outputCurrent)*1599;
 	#elif CONTROLADOR == 4
 		Vref = MPPT_PO(inputVoltage, inputCurrent);
-		Iref = pi_v(Vref, outputVoltage);
-		DUTY = (uint16_t)(pi_i(Iref, outputCurrent)*1599);
+		DUTY = (uint16_t)(pi_v(Vref, inputVoltage)*1599);
 	#elif CONTROLADOR == 5
 		Vref = MPPT_IC(inputVoltage, inputCurrent);
-		Iref = pi_v(Vref, inputVoltage);
-		DUTY = (uint16_t)(pi_i(Iref, inputCurrent)*1599);
+		DUTY = (uint16_t)(pi_v(Vref, inputVoltage)*1599);
+	#elif CONTROLADOR == 6
+		Vref = MPPT_recta(inputVoltage, inputCurrent);
+		DUTY = (uint16_t)(pi_v(Vref, inputVoltage)*1599);
 	#endif
 	
 	if (DUTY > dutyMax) DUTY = dutyMax;
@@ -256,6 +275,10 @@ float MPPT_IC(float V, float I){
 	return Vref;
 }
 
+float MPPT_recta(float V, float I){
+	return V_0 + ALPHA * I;
+}
+
 /*******************/
 /*** Controlador ***/
 /*******************/
@@ -286,9 +309,6 @@ float pi_i(float Iref, float Imed){
 	
 	salida = P + I;
 	
-	
-	#if CONTROLADOR == 1 || CONTROLADOR == 2
-	
 	if (salida > 1){
 		salida = 1;
 		I = I_ant;
@@ -297,7 +317,6 @@ float pi_i(float Iref, float Imed){
 		salida = 0;
 		I = I_ant;
 	}
-	#endif
   
 	I_ant = I;
 	return salida;
@@ -315,14 +334,28 @@ float pi_v(float Vref, float Vmed){
 	
 	salida = P + I;
 	
+	#if CONTROLADOR == 1 || CONTROLADOR == 2
+	// Corriente de referencia Iref
 	if(salida < 0){
 		salida = 0;
 		I = I_ant;
 	}
-	if(salida > 2){
-		salida = 2;
+	if(salida > I_MAX){
+		salida = I_MAX;
 		I = I_ant;
 	}
+	#else
+	// Ciclo de trabajo D
+	if(salida < 0){
+		salida = 0;
+		I = I_ant;
+	}
+	if(salida > 1){
+		salida = 1;
+		I = I_ant;
+	}
+	#endif
+	
 	I_ant = I;
 	
 	return salida;

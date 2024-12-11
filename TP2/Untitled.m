@@ -16,9 +16,9 @@ x0.vm = sim1150.v(idx_v);                                   % vm = 17.2483 V
 x0.im = sim1150.i(idx_v);                                   % im = 1.9122 A
 
 % Si se quiere un punto que no sea el de max pot:
-% P = Pmax*0.2;
+% P = Pmax*0.8;
 % idx_v = find(sim1150.i.*sim1150.v>=P,1,'first');       % inestable para control de corriente (sliding)
-% % idx_v = find(sim1150.i.*sim1150.v>=P,1,'last');        % estable
+% idx_v = find(sim1150.i.*sim1150.v>=P,1,'last');        % estable
 % x0.vm = sim1150.v(idx_v);
 % x0.im = sim1150.i(idx_v);
 
@@ -37,7 +37,7 @@ di = diff(sim1150.i);
 
 A = [di(idx_v)/Cm, -x0.u/Cm, 0; x0.u/Lf, -Rf/Lf, -1/Lf; 0, 1/Cf, -1/(Rbat*Cf)];
 B = [-x0.if/Cm,  x0.vm/Lf, 0]';
-C_if = [0 1 0];
+C_if = [0 -1 0];
 C_vm = [1 0 0];
 D = 0;
 
@@ -45,11 +45,16 @@ sys_if = ss(A,B,C_if,D);
 sys_vm = ss(A,B,C_vm,D);
 
 % Diseños PIs:
-kp_if = -0.0055;
-ki_if = -1500*0.0055;           % 8.2500
+kp_if = 0.0055;
+ki_if = 1500*0.0055;           % 8.2500
 
 kp_vm = -0.64601;
 ki_vm = -214.5*0.64601;         % 138.5691
+
+
+% MPPT parameters:
+T_MPPT = 0.2e-3;        % Tiempo de muestreo  0.2e-3
+varV = 0.02;            % delta V    0.02
 
 
 %% PARTE A1: 1 panel
@@ -270,8 +275,8 @@ Rendimiento = Energia_teorica/Energia
 
 % R_const = 0.9985
 % R_recta = 1.0022
-% R_PO = 0.9932
-% R_IC = 0.9921
+% R_PO = 0.9930
+% R_IC = 0.9930
 %%
 
 figure 
