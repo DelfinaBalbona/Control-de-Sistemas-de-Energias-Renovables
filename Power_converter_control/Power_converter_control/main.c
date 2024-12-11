@@ -15,6 +15,25 @@
 								// 4: MPPT P&O (Control de tensión a la entrada)
 								// 5: MPPT IC (Control de tensión a la entrada)
 
+#if CONTROLADOR == 1 || CONTROLADOR == 2 || CONTROLADOR == 3
+	// PI tension:
+	#define KP_V 0.01
+	#define KI_V 10000.0
+	// PI corriente:
+	#define KP_I 0.0055
+	#define KI_I 8.25
+	// MD:
+	#define ANCHO 0.001
+#elif  CONTROLADOR == 4 || CONTROLADOR == 5
+	// PI tension:
+	#define KP_V -0.64601
+	#define KI_V -138.5691
+	// PI corriente:
+	#define KP_I -0.0055
+	#define KI_I -8.25
+	// MD:
+	#define ANCHO 0.001
+
 
 // Controladores MPPT:
 #define V_VAR 0.05		// Variaciones en la tensión
@@ -22,16 +41,6 @@
 
 #define T_V 0.0002 //5KHz
 #define T_I 0.0002 //5KHz
-// PI tension:
-//#define KP_V 0.64601
-//#define KI_V 138.5691
-#define KP_V 0.01
-#define KI_V 10000.0
-// PI corriente:
-#define KP_I 0.0055
-#define KI_I 8.25
-// MD:
-#define ANCHO 0.001
 
 // Variables de referencia Iniciales
 volatile float Iref = 0.4;
