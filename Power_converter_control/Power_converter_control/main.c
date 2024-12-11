@@ -8,11 +8,19 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#define CONTROLADOR 3			// 1: Corriente a la salida
+
+#define CONTROLADOR 4			// 1: Corriente a la salida
 								// 2: Control de tension a la salida con control de corriente anidado.
 								// 3: Sliding de corriente a la salida
+								// 4: MPPT P&O (Control de tensión a la entrada)
+								// 5: MPPT IC (Control de tensión a la entrada)
 
-#define T_V 0.0002 //20KHz
+
+// Controladores MPPT:
+#define V_VAR 0.05		// Variaciones en la tensión
+#define V_INIT_REF 17.25    // Tensión de inicio MPPT
+
+#define T_V 0.0002 //5KHz
 #define T_I 0.0002 //5KHz
 // PI tension:
 //#define KP_V 0.64601
@@ -81,6 +89,7 @@ void configurar_timer(void);
 void configurar_PWM(void);
 void configurar_ADC(void);
 
+float MPPT_PO(float, float);
 float pi_v(float, float);
 float pi_i(float, float);
 uint16_t md_i(float, float);
@@ -125,48 +134,141 @@ ISR(TIMER1_OVF_vect){//TIMER1_COMPA_vect) {
 	medicion_variables();
 
 	cli();
-	#if CONTROLADOR == 1
-	DUTY = (uint16_t)(pi_i(Iref, outputCurrent)*1599);
-	#elif CONTROLADOR == 2
-	Iref = pi_v(Vref, outputVoltage);
-	DUTY = (uint16_t)(pi_i(Iref, outputCurrent)*1599);
-	#elif CONTROLADOR == 3
-	DUTY = md_i(Iref, outputCurrent)*1599;
+	
+	#if MPPT_CONTROL == 1
+		Vref = MPPT_PO(inputVoltage, inputCurrent);
+	#elif MPPT_CONTROL == 2
+		Vref = MPPT_IC(inputVoltage, inputCurrent);
 	#endif
 	
-	if (DUTY > dutyMax)
-		DUTY = dutyMax;
+	#if CONTROLADOR == 1
+		DUTY = (uint16_t)(pi_i(Iref, outputCurrent)*1599);
+	#elif CONTROLADOR == 2
+		Iref = pi_v(Vref, outputVoltage);
+		DUTY = (uint16_t)(pi_i(Iref, outputCurrent)*1599);
+	#elif CONTROLADOR == 3
+		DUTY = md_i(Iref, outputCurrent)*1599;
+	#elif CONTROLADOR == 4
+		Vref = MPPT_PO(inputVoltage, inputCurrent);
+		Iref = pi_v(Vref, outputVoltage);
+		DUTY = (uint16_t)(pi_i(Iref, outputCurrent)*1599);
+	#elif CONTROLADOR == 5
+		Vref = MPPT_IC(inputVoltage, inputCurrent);
+		Iref = pi_v(Vref, inputVoltage);
+		DUTY = (uint16_t)(pi_i(Iref, inputCurrent)*1599);
+	#endif
 	
-	if (DUTY < dutyMin)
-		DUTY = dutyMin;
+	if (DUTY > dutyMax) DUTY = dutyMax;
+	if (DUTY < dutyMin) DUTY = dutyMin;
 	
 	OCR1B = DUTY;                     // Actualizo ciclo de trabajo en generador PWM
 	sei();
 }
 
+/************************/
+/*** Controlador MPPT ***/
+/************************/
+
+float MPPT_PO(float V, float I){
+	static float Vold = 17, Pold = 17 * 1.7, Vref = V_INIT_REF;
+	
+	float P = V * I, deltaP, deltaV;
+	
+	deltaP = P - Pold;
+	deltaV = V - Vold;
+	
+	if (deltaP != 0)
+	{
+		if (deltaP > 0)
+		{
+			if (deltaV > 0)
+			{
+				Vref = Vref + V_VAR;
+			} 
+			else
+			{
+				Vref = Vref - V_VAR;
+			}
+		} 
+		else
+		{
+			if (deltaV > 0)
+			{
+				Vref = Vref - V_VAR;
+			}
+			else
+			{
+				Vref = Vref + V_VAR;
+			}
+		}
+	} 
+	
+	Vold = V;
+	Pold = P;
+	
+	return Vref;
+}
+
+
+float MPPT_IC(float V, float I){
+	static float Vold = 17, Iold = 1.7, Vref = V_INIT_REF;
+	
+	float deltaI, deltaV;
+	
+	deltaI = I - Iold;
+	deltaV = V - Vold;
+	
+	if (deltaV == 0)
+	{
+		if (deltaI > 0)
+		{
+			Vref = Vref + V_VAR;
+		} 
+		else
+		{
+			Vref = Vref - V_VAR;
+		}
+	} 
+	else if(deltaV != 0 && V != 0)
+	{
+		if (deltaI/deltaV > -I/V)
+		{
+			Vref = Vref + V_VAR;
+		} 
+		else if(deltaI/deltaV > -I/V)
+		{
+			Vref = Vref - V_VAR;
+		}
+	}
+	
+	Vold = V;
+	Iold = I;
+	
+	return Vref;
+}
 
 /*******************/
 /*** Controlador ***/
 /*******************/
 
 uint16_t md_i(float Iref, float Imed){
-	float error = Iref - Imed;
 	static uint16_t salida;
+	
+	float error = Iref - Imed;
 	
 	if(error > ANCHO){
 		salida = 1;
-		return 1;
 	}
 	if(error < -ANCHO){
 		salida = 0;
-		return 0;
 	}
 	return salida;
 }
 
 float pi_i(float Iref, float Imed){
-	float error, P, I, salida;
 	static float I_ant = 0;
+	
+	float error, P, I, salida;
 	
 	error = Iref - Imed;
 	
@@ -193,8 +295,9 @@ float pi_i(float Iref, float Imed){
 }
 
 float pi_v(float Vref, float Vmed){
-	float error, P, I, salida;
 	static float I_ant = 0;
+	
+	float error, P, I, salida;
 	
 	error = Vref - Vmed;
 	
@@ -229,8 +332,6 @@ void medicion_variables(void){
 	
 }
 
-
-
 /**********************************/
 /*** Funciones de configuración ***/
 /**********************************/
@@ -262,8 +363,6 @@ void configurar_ADC(void)
 	//DIDR0 = (1 << ADC0D); //  deshabilita buffer digital en A5
 	sei();
 }
-
-
 
 /****************************************************************************************************************************
 													ISR DE INTERRUPCION
