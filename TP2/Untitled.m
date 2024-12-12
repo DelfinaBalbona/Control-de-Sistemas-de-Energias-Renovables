@@ -33,8 +33,6 @@ x0.vf = Rbat*x0.if+Vbat;                                    % vf = 12.0265 V
 % Control:
 di = diff(sim1150.i);
 
-% x = [vm if vf]'
-
 A = [di(idx_v)/Cm, -x0.u/Cm, 0; x0.u/Lf, -Rf/Lf, -1/Lf; 0, 1/Cf, -1/(Rbat*Cf)];
 B = [-x0.if/Cm,  x0.vm/Lf, 0]';
 C_if = [0 -1 0];
@@ -51,11 +49,9 @@ ki_if = 1500*0.0055;           % 8.2500
 kp_vm = -0.64601;
 ki_vm = -214.5*0.64601;         % 138.5691
 
-
 % MPPT parameters:
 T_MPPT = 0.2e-3;        % Tiempo de muestreo  0.2e-3
 varV = 0.02;            % delta V    0.02
-
 
 %% PARTE A1: 1 panel
 
@@ -126,32 +122,21 @@ ylabel('Tension [V]','Interpreter', 'latex')
 
 %% PARTE B 1
 
-load('sim1150.mat');
-di = diff(sim1150.i);
-
-% x = [vm if vf]'
-
-A = [di(idx_v)/Cm, -x0.u/Cm, 0; x0.u/Lf, -Rf/Lf, -1/Lf; 0, 1/Cf, -1/(Rbat*Cf)];
-B = [-x0.if/Cm,  x0.vm/Lf, 0]';
-C_if = [0 1 0];
-C_vm = [1 0 0];
-D = 0;
-
-sys_if = ss(A,B,C_if,D);
-sys_vm = ss(A,B,C_vm,D);
-
-
-% PI Tuning:
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Control if:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Diseño PI:
-kp_if = -0.0055;
-ki_if = -1500*0.0055;
 
 % Planta modelo:
 G_if = tf(sys_if);
+
+% Gr�fica de polos y ceros de la planta:
+figure;
+pzmap(G_if);
+xlim([-2000 2000]);
+xlabel('Parte Real');
+ylabel('Parte Imaginaria');
+
 % PI:
 PI_if = pid(kp_if,ki_if,0);
 
@@ -163,10 +148,9 @@ step(T_if);
 % Para el diseño del PI:
 %controlSystemDesigner(sys_if,PI_if)
 
-% Obtener los polos y ceros de la planta
 figure;
-pzmap(G_if);
-xlim([-1000 2000]);
+pzmap(T_if);
+xlim([-2000 2000]);
 xlabel('Parte Real');
 ylabel('Parte Imaginaria');
 
@@ -175,11 +159,16 @@ ylabel('Parte Imaginaria');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Diseño PI:
 
-kp_vm = -0.64601;
-ki_vm = -214.5*0.64601;         % 138.5691
-
 % Planta modelo:
 G_vm = tf(sys_vm);
+
+% Obtener los polos y ceros de la planta
+figure;
+pzmap(G_vm);
+xlim([-5000 1000]);
+xlabel('Parte Real');
+ylabel('Parte Imaginaria');
+
 % PI:
 PI_vm = pid(kp_vm,ki_vm,0);
 
@@ -191,12 +180,12 @@ step(T_vm);
 % Para el diseño del PI:
 %controlSystemDesigner(sys_vm,PI_vm)
 
-% Obtener los polos y ceros de la planta
 figure;
-pzmap(G_vm);
+pzmap(T_vm);
 xlim([-5000 1000]);
 xlabel('Parte Real');
 ylabel('Parte Imaginaria');
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
