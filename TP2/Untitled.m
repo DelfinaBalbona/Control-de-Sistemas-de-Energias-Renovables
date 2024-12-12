@@ -56,7 +56,7 @@ varV = 0.02;            % delta V    0.02
 %% PARTE A1: 1 panel
 
 load('experimento_1Panel.mat')
-load('sim1150.mat')
+load('sim1150_con_diodo.mat')
 
 figure(1)
 plot(sim1150.v, sim1150.i);
@@ -247,25 +247,31 @@ plot(Vr(Imf),Vr(Imf).*Imf')     % Recta que pasa por los max de pot.
 plot(vm_max,im_max.*vm_max, 'o');
 
 %% Parte C: Rendimientos
-P_teorica = [23.9806    23.9806 30.06   30.06   27.9088 27.9088 30.06   30.06   34.549  34.549];
-t_teorica = [0          0.3     0.3     0.35    0.35    0.45    0.45    0.5     0.5     1];
+P_max = [23.9806    23.9806 30.06   30.06   27.9088 27.9088 30.06   30.06   34.549  34.549];
+t_max = [0          0.3     0.3     0.35    0.35    0.45    0.45    0.5     0.5     1];
 P = out.v_m .* out.i_m;
+
+
+Energia = trapz(P,out.tout);
+Energia_max = trapz(P_max,t_max);
+
+Rendimiento_MPPT = Energia_max/Energia
 
 figure
 plot(out.tout,P);
 hold on;
-plot(t_teorica,P_teorica);
+plot(t_max,P_max);
+grid on;
+legend("Potencia","Potencia max");
+xlabel('Tiempo [s]','Interpreter', 'latex');
+ylabel('Potencia [W]','Interpreter', 'latex');
 
 
-Energia = trapz(P,out.tout);
-Energia_teorica = trapz(P_teorica,t_teorica);
-
-Rendimiento = Energia_teorica/Energia
-
-% R_const = 0.9985
-% R_recta = 1.0022
-% R_PO = 0.9930
-% R_IC = 0.9930
+% R_const = 0.8281
+% R_recta = 0.9127
+% R_PO = 0.9888
+% R_PO_D = 0.9156
+% R_IC = 0.9834
 %%
 
 figure 
@@ -281,5 +287,6 @@ plot(out.tout, out.i_f);
 plot(out.v, out.i);
 plot(out.v, out.i .* out.v);
 
-sim1150.v = out.v;
-sim1150.i = out.i;
+sim600.v = out.v;
+sim600.i = out.i;
+
