@@ -226,6 +226,9 @@ plot(sim1150.v,sim1150.i);
 plot(sim1400.v,sim1400.i);
 
 plot(vm_max,im_max, 'o');
+xlabel('Tension [V]','Interpreter', 'latex');
+ylabel('Corriente [A]','Interpreter', 'latex');
+
 
 
 Vr=fit(im_max,vm_max,'poly1');      % Vr(x) = Vr.p1*x + Vr.p2 
@@ -245,6 +248,8 @@ plot(sim1400.v,sim1400.v.*sim1400.i);
 plot(Vr(Imf),Vr(Imf).*Imf')     % Recta que pasa por los max de pot.
 
 plot(vm_max,im_max.*vm_max, 'o');
+xlabel('Tension [V]','Interpreter', 'latex');
+ylabel('Potencia [W]','Interpreter', 'latex');
 
 %% Parte C: Rendimientos
 P_max = [23.9806    23.9806 30.06   30.06   27.9088 27.9088 30.06   30.06   34.549  34.549];
@@ -252,10 +257,10 @@ t_max = [0          0.3     0.3     0.35    0.35    0.45    0.45    0.5     0.5 
 P = out.v_m .* out.i_m;
 
 
-Energia = trapz(P,out.tout);
-Energia_max = trapz(P_max,t_max);
+Energia = trapz(out.tout,P);
+Energia_max = trapz(t_max,P_max);
 
-Rendimiento_MPPT = Energia_max/Energia
+Rendimiento_MPPT = Energia/Energia_max
 
 figure
 plot(out.tout,P);
@@ -267,11 +272,11 @@ xlabel('Tiempo [s]','Interpreter', 'latex');
 ylabel('Potencia [W]','Interpreter', 'latex');
 
 
-% R_const = 0.8281
-% R_recta = 0.9127
-% R_PO = 0.9888
-% R_PO_D = 0.9156
-% R_IC = 0.9834
+% R_const = 0.9509
+% R_recta = 0.9690
+% R_PO = 0.9984
+% R_PO_D = 0.9815
+% R_IC = 0.9984
 %%
 
 figure 
@@ -287,6 +292,6 @@ plot(out.tout, out.i_f);
 plot(out.v, out.i);
 plot(out.v, out.i .* out.v);
 
-sim600.v = out.v;
-sim600.i = out.i;
+sim1150.v = out.v;
+sim1150.i = out.i;
 
