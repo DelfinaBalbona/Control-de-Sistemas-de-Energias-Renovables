@@ -16,7 +16,7 @@ x0.vm = sim1150.v(idx_v);                                   % vm = 17.2483 V
 x0.im = sim1150.i(idx_v);                                   % im = 1.9122 A
 
 % Si se quiere un punto que no sea el de max pot:
-% P = Pmax*0.8;
+% P = Pmax*0.98;
 % idx_v = find(sim1150.i.*sim1150.v>=P,1,'first');       % inestable para control de corriente (sliding)
 % idx_v = find(sim1150.i.*sim1150.v>=P,1,'last');        % estable
 % x0.vm = sim1150.v(idx_v);
@@ -52,6 +52,9 @@ ki_vm = -214.5*0.64601;         % 138.5691
 % MPPT parameters:
 T_MPPT = 0.2e-3;        % Tiempo de muestreo  0.2e-3
 varV = 0.02;            % delta V    0.02
+
+Vr.p1 = 0.150300052878808;
+Vr.p2 = 17.715600479859134;
 
 %% PARTE A1: 1 panel
 
@@ -189,6 +192,26 @@ ylabel('Parte Imaginaria');
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
+
+%% PARTE B Grafica de diagramas en bloque:
+figure 
+plot(out.tout, out.v_m);
+grid on;
+xlabel('Tiempo [s]','Interpreter', 'latex');
+ylabel('Tension [V]','Interpreter', 'latex');
+figure 
+plot(out.tout, out.i_f);
+grid on;
+xlabel('Tiempo [s]','Interpreter', 'latex');
+ylabel('Corriente [A]','Interpreter', 'latex');
+figure
+plot(out.tout, out.v_f);
+grid on;
+xlabel('Tiempo [s]','Interpreter', 'latex');
+ylabel('Tension [V]','Interpreter', 'latex');
+
+
+
 %% Parte C:
 
 load("sim600.mat");
@@ -252,8 +275,8 @@ xlabel('Tension [V]','Interpreter', 'latex');
 ylabel('Potencia [W]','Interpreter', 'latex');
 
 %% Parte C: Rendimientos
-P_max = [23.9806    23.9806 30.06   30.06   27.9088 27.9088 30.06   30.06   34.549  34.549];
-t_max = [0          0.3     0.3     0.35    0.35    0.45    0.45    0.5     0.5     1];
+P_max = [23.9806    23.9806 30.06   30.06   27.9088 27.9088 30.06   30.06   34.549  34.549  27.9088 27.9088];
+t_max = [0          0.3     0.3     0.35    0.35    0.45    0.45    0.5     0.5     0.6     0.6     1];
 P = out.v_m .* out.i_m;
 
 
@@ -272,11 +295,11 @@ xlabel('Tiempo [s]','Interpreter', 'latex');
 ylabel('Potencia [W]','Interpreter', 'latex');
 
 
-% R_const = 0.9509
-% R_recta = 0.9690
-% R_PO = 0.9984
-% R_PO_D = 0.9815
-% R_IC = 0.9984
+% R_const = 0.9269
+% R_recta = 0.9413
+% R_PO = 0.9976
+% R_PO_D = 0.9802
+% R_IC = 0.9974
 %%
 
 figure 

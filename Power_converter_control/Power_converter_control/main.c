@@ -8,7 +8,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
-#define ARDUINO_IDE 0
+#define ARDUINO_IDE 0			// 1: para ver los serial.print
 
 #define CONTROLADOR 4			// 1: Corriente a la salida
 								// 2: Control de tension a la salida con control de corriente anidado.
@@ -20,7 +20,7 @@
 #if CONTROLADOR == 1 || CONTROLADOR == 2 || CONTROLADOR == 3
 	// PI tension:
 	#define KP_V 0.01
-	#define KI_V 10000.0
+	#define KI_V 10000.0		// ver los valores de estas ganancias!
 	// PI corriente:
 	#define KP_I 0.0055
 	#define KI_I 8.25
@@ -47,8 +47,8 @@
 #define V_INIT_REF 17.25    // Tensión de inicio MPPT
 
 // MPPT recta V-I:		Vref = V_0 + ALPHA * I
-#define ALPHA 0.127760300033380
-#define  V_0 16.987504787624442
+#define ALPHA 0.150300052878808
+#define  V_0 17.715600479859134
 
 // Variables de referencia Iniciales
 volatile float Iref = 0.4;
@@ -145,7 +145,7 @@ int main(void)
 		{
 			lastMeasurementTime = ms;  // Actualizar el tiempo de la última muestra
 			medicion_variables();
-			Serial.print(outputVoltage);
+			Serial.print(inputVoltage);
 			Serial.print("\n");
 		}
 		ms++;
